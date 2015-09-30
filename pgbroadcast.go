@@ -37,6 +37,7 @@ func startPgListener(pgconninfo string, pglistenchannel string, broadcastingchan
 	}
 	// Wait for notifications in goroutine, pass them to the broadcastingchannel.
 	go waitForNotification(l)
+	fmt.Println("pgbroadcast: running.")
 	return nil
 }
 
