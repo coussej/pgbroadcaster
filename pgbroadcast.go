@@ -37,7 +37,7 @@ func startPgListener(pgconninfo string, pglistenchannel string, broadcastingchan
 	}
 	// Wait for notifications in goroutine, pass them to the broadcastingchannel.
 	go waitForNotification(l)
-	fmt.Println("pgbroadcast: running.")
+	fmt.Println("pgbroadcast: listening for notifications")
 	return nil
 }
 
@@ -54,7 +54,7 @@ func waitForNotification(l *pq.Listener) {
 				h.broadcast <- pgn
 			}
 		case <-time.After(60 * time.Second):
-			fmt.Println("pgbroadcast: received no events for 60 seconds, ping connection")
+			// received no events for 60 seconds, ping connection")
 			go func() {
 				l.Ping()
 			}()

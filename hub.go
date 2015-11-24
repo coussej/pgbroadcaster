@@ -29,8 +29,8 @@ func (h *hub) run() {
 			// New pgnotification received.
 			// Loop over all clients in hub.
 			for c := range h.connections {
-				// Only broadcast if the client is registered to the table.
-				if c.hasSubscription(m.Table) {
+				// Only broadcast if the client is subscribed to the table.
+				if c.subscriptions[m.Table] {
 					// Send the notification. If the send fails (for example when the
 					// buffer is full, close the connection. This means a bulk update
 					// can close the connection with the websocket.

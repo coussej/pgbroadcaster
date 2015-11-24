@@ -1,14 +1,9 @@
-// Copyright 2013 The Gorilla WebSocket Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style
-// license that can be found in the LICENSE file.
-
 package pgbroadcast
 
 import (
 	"fmt"
 	"log"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -28,36 +23,25 @@ const (
 	maxMessageSize = 512
 )
 
+// the websocket upgrader.
 var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
 }
 
 // connection is a middleman between the websocket connection and the hub.
+// it contains the actual websocket connection, a map where we keep the tables
+// this connection is monitoring, and a send channel in which the  hub will
+// write the outbound notifications.
 type connection struct {
-	// The websocket connection.
-	ws *websocket.Conn
-
-	// The tables from which this connections wants updates
-	pgtables []string
-
-	// Buffered channel of outbound notifications.
-	send chan pgnotification
+	ws            *websocket.Conn
+	subscriptions map[string]bool
+	send          chan pgnotification
 }
 
-// has subscription checks returns true is the connection registered to a
-// specific pgtable.
-func (c *connection) hasSubscription(pgtable string) bool {
-	for _, v := range c.pgtables {
-		if v == pgtable {
-			return true
-		}
-	}
-	return false
-}
-
-// reader is here just for show. We will print the messages to the console,
-// but we don't want any incoming trafic. Shut up and listen, websocket!
+// the reader listens for incoming messages on the websocket. the purpose is
+// that the client sends a string message containing the tablename it wants to
+// monitor.
 func (c *connection) reader() {
 	defer func() {
 		h.unregister <- c
@@ -67,11 +51,12 @@ func (c *connection) reader() {
 	c.ws.SetReadDeadline(time.Now().Add(pongWait))
 	c.ws.SetPongHandler(func(string) error { c.ws.SetReadDeadline(time.Now().Add(pongWait)); return nil })
 	for {
-		_, message, err := c.ws.ReadMessage()
-		if err != nil {
+		t, m, err := c.ws.ReadMessage()
+		if err != nil || t != websocket.TextMessage {
 			break
 		}
-		fmt.Println("pgbroadcast: incoming message from ws: ", string(message))
+		c.subscriptions[string(m)] = true
+		fmt.Println("pgbroadcast: incoming subscription for table [", string(m), "]")
 	}
 }
 
@@ -81,12 +66,14 @@ func (c *connection) writeMessage(mt int, payload []byte) error {
 	return c.ws.WriteMessage(mt, payload)
 }
 
+// writeMessage marshals an interface to json and sends it.
 func (c *connection) writeJSON(i interface{}) error {
 	c.ws.SetWriteDeadline(time.Now().Add(writeWait))
 	return c.ws.WriteJSON(i)
 }
 
-// writer writes messages from the hub to the websocket connection.
+// writer writes the pgnotificiations it receives from the hub to the websocket
+// connection.
 func (c *connection) writer() {
 	ticker := time.NewTicker(pingPeriod)
 	defer func() {
@@ -118,23 +105,24 @@ func ServeWs(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Method not allowed", 405)
 		return
 	}
+	fmt.Println("pgbroadcast: incoming client connection", r.Header["User-Agent"])
 
-	// Check if the querystring contains a parameter 'tables'
-	t := r.URL.Query().Get("tables")
-	if t == "" {
-		http.Error(w, "Querystring does not contain parameter 'tables'.", 400)
-		return
-	}
-	fmt.Println("pqbroadcast: client connection received: ", t)
-	// Split the csv parameter to a slice.
-	tables := strings.Split(t, ",")
+	// upgrade the connection to a websocket connection
 	ws, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Println(err)
 		return
 	}
-	c := &connection{ws: ws, pgtables: tables, send: make(chan pgnotification, 1024)}
+
+	// create a new connection struct and add it to the hub.
+	c := &connection{
+		ws:            ws,
+		subscriptions: make(map[string]bool),
+		send:          make(chan pgnotification, 1024),
+	}
 	h.register <- c
+
+	// start the connections reader and writer.
 	go c.writer()
 	c.reader()
 }
