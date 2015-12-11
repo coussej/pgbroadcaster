@@ -45,6 +45,10 @@ func waitForNotification(l *pq.Listener) {
 	for {
 		select {
 		case n := <-l.Notify:
+			//
+			if n == nil {
+				continue
+			}
 			// Unmarshal JSON in pgnotification struct
 			var pgn pgnotification
 			err := json.Unmarshal([]byte(n.Extra), &pgn)
