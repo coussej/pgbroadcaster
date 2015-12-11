@@ -45,7 +45,8 @@ func waitForNotification(l *pq.Listener) {
 	for {
 		select {
 		case n := <-l.Notify:
-			//
+			// For some reason after connection loss with the postgres database,
+			// the first notifications is a nil notification. Ignore it.
 			if n == nil {
 				continue
 			}
