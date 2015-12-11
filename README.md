@@ -45,8 +45,8 @@ $$ LANGUAGE plpgsql;
 Add the trigger to your table:
 
 ```SQL
-CREATE TRIGGER products_notify_event
-AFTER INSERT OR UPDATE OR DELETE ON products
+CREATE TRIGGER exampletable_notify_event
+AFTER INSERT OR UPDATE OR DELETE ON exampletable
     FOR EACH ROW EXECUTE PROCEDURE notify_event();
 ```
 
