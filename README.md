@@ -1,5 +1,5 @@
 # pgbroadcast
-Example app that shows how to send postgres JSON notifictions over websockets
+Package that listen to PostgresSQL JSON notifications and exposes a websocket handler to broadcast the notification to client.
 
 ## Usage
 
