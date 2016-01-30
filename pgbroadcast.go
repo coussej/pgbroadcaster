@@ -14,7 +14,12 @@ type pgnotification struct {
 	Data   map[string]interface{} `json:"data"`
 }
 
-func Run(pgconninfo string, pglistenchannel string) error {
+type PgBroadcast struct {
+	h          hub
+	pglistener ListenerConn
+}
+
+func NewPgBroadcast(pgconninfo string, pglistenchannel string) error {
 	go h.run()
 	err := startPgListener(pgconninfo, pglistenchannel, h.broadcast)
 	return err
