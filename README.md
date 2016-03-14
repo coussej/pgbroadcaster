@@ -65,17 +65,19 @@ import (
 )
 
 func main() {
-  // call the Run method, using the connection info as first argument and the 
-  // channel name as second.
-	err := pgbroadcast.Run("dbname=exampledb user=webapp password=webapp", "events")
+
+	// Create a new broadcaster
+	pb, err := pgbroadcaster.NewPgBroadcaster("dbname=exampledb user=webapp password=webapp")
+	
+  // listen to the events table
+  err = pb.Listen("events")
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println(err)
 	}
 
-	// use the exposed webhandler in your webserver.
-	http.HandleFunc("/ws", pgbroadcast.ServeWs)
-
-	err = http.ListenAndServe("localhost", nil)
+	// serve the websocket
+	http.HandleFunc("/ws", pb.ServeWs)
+	err = http.ListenAndServe(":6060", nil)
 	if err != nil {
 		log.Fatal("ListenAndServe: ", err)
 	}
