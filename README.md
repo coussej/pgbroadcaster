@@ -68,7 +68,7 @@ func main() {
 	// Create a new broadcaster
 	pb, err := pgbroadcaster.NewPgBroadcaster("dbname=exampledb user=webapp password=webapp")
 
-	// listen to the events table
+	// listen to the events channel
 	err = pb.Listen("events")
 	if err != nil {
 		fmt.Println(err)
