@@ -1,4 +1,4 @@
-package pgbroadcast
+package pgbroadcaster
 
 import (
 	"fmt"
@@ -37,6 +37,7 @@ type connection struct {
 	ws            *websocket.Conn
 	subscriptions map[string]bool
 	send          chan pgnotification
+	h             *hub
 }
 
 // the reader listens for incoming messages on the websocket. the purpose is
@@ -44,7 +45,7 @@ type connection struct {
 // monitor.
 func (c *connection) reader() {
 	defer func() {
-		h.unregister <- c
+		c.h.unregister <- c
 		c.ws.Close()
 	}()
 	c.ws.SetReadLimit(maxMessageSize)
@@ -99,7 +100,7 @@ func (c *connection) writer() {
 }
 
 // serverWs handles websocket requests from the peer.
-func ServeWs(w http.ResponseWriter, r *http.Request) {
+func (pb *PgBroadcaster) ServeWs(w http.ResponseWriter, r *http.Request) {
 	// Accept only GET requests
 	if r.Method != "GET" {
 		http.Error(w, "Method not allowed", 405)
@@ -119,8 +120,9 @@ func ServeWs(w http.ResponseWriter, r *http.Request) {
 		ws:            ws,
 		subscriptions: make(map[string]bool),
 		send:          make(chan pgnotification, 1024),
+		h:             pb.h,
 	}
-	h.register <- c
+	pb.h.register <- c
 
 	// start the connections reader and writer.
 	go c.writer()

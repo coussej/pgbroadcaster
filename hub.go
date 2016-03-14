@@ -1,4 +1,6 @@
-package pgbroadcast
+package pgbroadcaster
+
+import "fmt"
 
 // The hub maintains the set of active connections and broadcasts messages to
 // the connections.
@@ -28,6 +30,7 @@ func (h *hub) run() {
 		case m := <-h.broadcast:
 			// New pgnotification received.
 			// Loop over all clients in hub.
+			fmt.Println("hub:", m, h.connections)
 			for c := range h.connections {
 				// Only broadcast if the client is subscribed to the table.
 				if c.subscriptions[m.Table] {
@@ -44,11 +47,4 @@ func (h *hub) run() {
 			}
 		}
 	}
-}
-
-var h = hub{
-	broadcast:   make(chan pgnotification),
-	register:    make(chan *connection),
-	unregister:  make(chan *connection),
-	connections: make(map[*connection]bool),
 }
