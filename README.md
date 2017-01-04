@@ -60,6 +60,7 @@ package main
 import (
 	"log"
 	"net/http"
+	"fmt"
 
 	"github.com/coussej/pgbroadcast"
 )
